@@ -2,6 +2,7 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+// Painel de gestão da loja (Android, Desktop e Web) + painel do super admin.
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidApplication)
@@ -30,62 +31,56 @@ kotlin {
     }
 
     sourceSets {
-        androidMain.dependencies {
-            implementation(compose.preview)
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.ktor.client.android)
-            implementation(libs.ktor.client.logging)
-            implementation("io.ktor:ktor-client-logging:3.3.0")
-        }
         commonMain.dependencies {
+            implementation(projects.shared)
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            implementation(compose.materialIconsExtended)
+            implementation(libs.material.icons.extended)
+            implementation(libs.compose.material3)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation(compose.materialIconsExtended)
             implementation(libs.koalaplot.core)
-            implementation(libs.navigation)
-            implementation(libs.bundles.ktor)
-            implementation(libs.material.icons.extended)
-            implementation(libs.ktor.client.cio)
-            implementation(libs.ktor.client.core)
-            implementation(libs.ktor.client.logging)
-            implementation("io.ktor:ktor-client-logging:3.3.0")
-            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
-            implementation(libs.compose.material3)
-
+            implementation(libs.bundles.ktor.client)
+            implementation(libs.kotlinx.datetime)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+        }
+        androidMain.dependencies {
+            implementation(compose.preview)
+            implementation(libs.androidx.activity.compose)
+            implementation(libs.ktor.client.android)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
             implementation(libs.ktor.client.cio)
-            implementation(libs.ktor.client.logging)
-            implementation("org.slf4j:slf4j-simple:2.0.16")
-            implementation("io.ktor:ktor-client-logging:3.3.0")
         }
         jsMain.dependencies {
-            implementation("io.ktor:ktor-client-js:3.3.0")
+            implementation(libs.ktor.client.js)
+        }
+        wasmJsMain.dependencies {
+            implementation(libs.ktor.client.js)
         }
     }
 }
 
 android {
-    namespace = "org.example.project"
+    namespace = "br.com.cardapio.app"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "org.example.project"
+        // Nome provisório: trocar quando a marca do produto for definida (antes de publicar na Play Store)
+        applicationId = "br.com.cardapio.painel"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.1.0"
     }
 
     packaging {
@@ -110,11 +105,11 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "org.example.project.MainKt"
+        mainClass = "br.com.cardapio.app.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "org.example.project"
+            packageName = "PainelCardapio"
             packageVersion = "1.0.0"
         }
     }

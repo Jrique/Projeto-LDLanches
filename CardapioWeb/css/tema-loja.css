@@ -1,0 +1,119 @@
+/* =====================================================================
+   TEMA DA LOJA
+   Carregado depois do style.css. As variáveis --cor-* são preenchidas pelo
+   script.js a partir da aparência cadastrada (aplicarAparenciaDaLoja).
+   ===================================================================== */
+
+/* ---------- Sempre: texto legível sobre as cores da marca ---------- */
+:root {
+    --cor-texto-sobre-primaria: #FFFFFF;
+    --cor-texto-sobre-acento: #000000;
+    --cor-acento-texto: var(--cor-acento);   /* acento usado como cor de TEXTO (preços etc.) */
+}
+
+.banner-btn, .checkout-btn, .finalizar-btn, .item-btn-qty, .btn-editar-perfil,
+.modal-btn-primary, .produto-add-btn,
+.categoria-btn.ativo, .categoria-btn:hover {
+    color: var(--cor-texto-sobre-primaria);
+}
+.btn-add, .cart-badge { color: var(--cor-texto-sobre-acento); }
+.preco-atual, .produto-preco, .produto-detalhe-preco, .produto-selo, .banner-label,
+.nav-link.active, .nav-link:hover {
+    color: var(--cor-acento-texto);
+}
+
+/* ---------- Tema claro (fundo da loja claro) ---------- */
+html[data-tema="claro"] {
+    --cor-superficie:  #FFFFFF;
+    --cor-superficie-2: #F3F8FB;
+    --cor-texto:       #1E2B36;
+    --cor-texto-sec:   #5C6B77;
+    --cor-borda:       rgba(30, 43, 54, 0.12);
+    --shadow-card:     0 10px 24px rgba(30, 43, 54, 0.10);
+    --shadow-header:   0 4px 14px rgba(30, 43, 54, 0.10);
+    --shadow-img:      0 8px 18px rgba(30, 43, 54, 0.14);
+    --overlay-bg:      rgba(30, 43, 54, 0.35);
+    --modal-bg:        #FFFFFF;
+}
+
+/* Cabeçalho na cor da marca */
+html[data-tema="claro"] .logo-text,
+html[data-tema="claro"] .loja-status,
+html[data-tema="claro"] .header-icon-btn { color: var(--cor-texto-sobre-primaria); }
+html[data-tema="claro"] .header-icon-btn,
+html[data-tema="claro"] .brand-logo { background-color: rgba(255, 255, 255, 0.35); border-color: rgba(255, 255, 255, 0.6); }
+
+/* Superfícies que eram cinza-escuro */
+html[data-tema="claro"] .faixa-endereco-conteudo,
+html[data-tema="claro"] .checkout-card,
+html[data-tema="claro"] .busca-wrapper,
+html[data-tema="claro"] .bottom-nav {
+    background: var(--cor-superficie);
+    border-color: var(--cor-borda);
+}
+html[data-tema="claro"] .banner-img,
+html[data-tema="claro"] .produto-img,
+html[data-tema="claro"] .carrinho-item img,
+html[data-tema="claro"] .item-controles,
+html[data-tema="claro"] .payment-opcao,
+html[data-tema="claro"] .perfil-avatar,
+html[data-tema="claro"] .modal-form input,
+html[data-tema="claro"] .modal-form textarea,
+html[data-tema="claro"] .modal-btn-secundario,
+html[data-tema="claro"] .produto-detalhe-img,
+html[data-tema="claro"] .pagamento-opcao-linha,
+html[data-tema="claro"] .checkout-form .grupo-entrega label,
+html[data-tema="claro"] .checkout-form #observacoes {
+    background-color: var(--cor-superficie-2);
+    border-color: var(--cor-borda);
+    color: var(--cor-texto);
+}
+html[data-tema="claro"] .checkout-form .grupo-entrega label:hover { background: #FFFFFF; }
+html[data-tema="claro"] .checkout-editar-btn { background: var(--cor-superficie-2); border-color: var(--cor-borda); color: var(--cor-texto); }
+html[data-tema="claro"] .rodape-whats { background: var(--cor-superficie); border-top-color: var(--cor-borda); }
+
+/* Textos que eram brancos ou cinza-claro */
+html[data-tema="claro"] .faixa-endereco-label,
+html[data-tema="claro"] .banner-titulo,
+html[data-tema="claro"] .item-controles span,
+html[data-tema="claro"] .checkout-form .grupo-entrega,
+html[data-tema="claro"] .checkout-form .campo-observacoes label,
+html[data-tema="claro"] .rodape-whats-conteudo strong,
+html[data-tema="claro"] .checkout-titulo-sessao,
+html[data-tema="claro"] .checkout-card,
+html[data-tema="claro"] .endereco-linha,
+html[data-tema="claro"] .checkout-item-linha,
+html[data-tema="claro"] .checkout-item-nome,
+html[data-tema="claro"] .checkout-item-total,
+html[data-tema="claro"] .resumo-linha,
+html[data-tema="claro"] .resumo-total,
+html[data-tema="claro"] .pagamento-opcao-texto,
+html[data-tema="claro"] .busca-input { color: var(--cor-texto); }
+
+html[data-tema="claro"] .rodape-whats-conteudo,
+html[data-tema="claro"] .checkout-item-preco-unit,
+html[data-tema="claro"] .pagamento-opcao-texto small,
+html[data-tema="claro"] .busca-input::placeholder,
+html[data-tema="claro"] .busca-clear-btn,
+html[data-tema="claro"] .checkout-form #observacoes::placeholder { color: var(--cor-texto-sec); }
+
+html[data-tema="claro"] .checkout-item-linha,
+html[data-tema="claro"] .resumo-total { border-color: var(--cor-borda); }
+
+/* Botões que eram vermelhos fixos passam a usar a cor da marca */
+html[data-tema="claro"] .home-endereco-btn,
+html[data-tema="claro"] .btn-finalizar-pedido {
+    background: var(--cor-primaria-start);
+    color: var(--cor-texto-sobre-primaria);
+}
+html[data-tema="claro"] .pagamento-opcao-linha input[type="radio"],
+html[data-tema="claro"] .checkout-form .grupo-entrega input[type="radio"] { accent-color: var(--cor-primaria-start); }
+
+/* Selo do produto e etiqueta de banner sobre fundo claro */
+html[data-tema="claro"] .produto-selo { background-color: rgba(255, 255, 255, 0.9); }
+
+/* Hero: banner da loja com véu claro para o texto escuro ficar legível */
+html[data-tema="claro"] .hero-btn { background: var(--cor-primaria-start); color: var(--cor-texto-sobre-primaria); }
+/* Sem banner próprio a faixa usa a foto escura padrão: texto continua claro */
+html[data-tema="claro"] .hero-banner:not(.hero-com-banner) h2 { color: #FFFFFF; }
+html[data-tema="claro"] .hero-banner:not(.hero-com-banner) p { color: rgba(255, 255, 255, 0.85); }

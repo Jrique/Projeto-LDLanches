@@ -1,7 +1,149 @@
+// ================== LOJA (multi-loja) ==================
+// O cardápio é servido pelo servidor em /{endereco-da-loja}/ (ex.: /ld-lanches/).
+// O primeiro trecho do caminho identifica a loja; tudo vem da API pública dela.
+const SLUG_LOJA = (window.location.pathname.split('/').filter(Boolean)[0] || '').toLowerCase();
+const API_LOJA = `/api/public/lojas/${encodeURIComponent(SLUG_LOJA)}`;
+let VITRINE_LOJA = null;
+
+// Várias lojas ficam no mesmo domínio, então sacola e histórico são separados por loja.
+// (O perfil do cliente — nome/endereço — é compartilhado: é a mesma pessoa.)
+const CHAVE_CARRINHO = `carrinho:${SLUG_LOJA}`;
+const CHAVE_PEDIDOS = `pedidos:${SLUG_LOJA}`;
+
+// Promessa da vitrine: quem precisa da aparência (ex.: imagem padrão dos produtos) espera por ela.
+let VITRINE_PRONTA = Promise.resolve(null);
+document.addEventListener('DOMContentLoaded', () => { VITRINE_PRONTA = carregarVitrineDaLoja(); });
+
+/** Busca nome, aparência e módulos da loja e aplica no visual do cardápio. */
+async function carregarVitrineDaLoja() {
+    try {
+        const resp = await fetch(API_LOJA, { headers: { 'Accept': 'application/json' } });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        VITRINE_LOJA = await resp.json();
+        aplicarAparenciaDaLoja(VITRINE_LOJA);
+        return VITRINE_LOJA;
+    } catch (e) {
+        console.error('Erro ao carregar dados da loja:', e);
+        return null;
+    }
+}
+
+/** Imagem usada nos produtos enquanto não há fotos cadastradas (Fase 1): o logo da loja. */
+function imagemPadraoProduto() {
+    return (VITRINE_LOJA && VITRINE_LOJA.aparencia && VITRINE_LOJA.aparencia.logoUrl) || 'images/logo.png';
+}
+
+// ---------- Cores: contraste automático ----------
+function hexParaRgb(hex) {
+    const n = parseInt(hex.replace('#', ''), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function rgbParaHex([r, g, b]) {
+    return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+}
+function luminancia(hex) {
+    const [r, g, b] = hexParaRgb(hex).map(v => {
+        const c = v / 255;
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function contraste(a, b) {
+    const [l1, l2] = [luminancia(a), luminancia(b)].sort((x, y) => y - x);
+    return (l1 + 0.05) / (l2 + 0.05);
+}
+/** Escolhe texto claro ou escuro, o que tiver mais contraste com a cor de fundo. */
+function textoSobre(cor) {
+    return contraste(cor, '#FFFFFF') >= contraste(cor, '#1E2B36') ? '#FFFFFF' : '#1E2B36';
+}
+/** Escurece a cor até atingir o contraste mínimo (WCAG 4.5) contra o fundo. */
+function corLegivelSobre(cor, fundo, minimo = 4.5) {
+    let rgb = hexParaRgb(cor);
+    for (let i = 0; i < 30 && contraste(rgbParaHex(rgb), fundo) < minimo; i++) rgb = rgb.map(v => v * 0.9);
+    return rgbParaHex(rgb);
+}
+
+function aplicarAparenciaDaLoja(loja) {
+    const ap = loja.aparencia || {};
+    const raiz = document.documentElement;
+    const css = raiz.style;
+    const temaClaro = ap.corFundo && luminancia(ap.corFundo) > 0.5;
+
+    if (ap.corPrimaria) {
+        css.setProperty('--cor-primaria-start', ap.corPrimaria);
+        css.setProperty('--cor-texto-sobre-primaria', textoSobre(ap.corPrimaria));
+        if (temaClaro) css.setProperty('--cor-primaria-end', corLegivelSobre(ap.corPrimaria, '#FFFFFF', 2.2));
+    }
+    if (ap.corSecundaria) {
+        css.setProperty('--cor-acento', ap.corSecundaria);
+        css.setProperty('--cor-texto-sobre-acento', textoSobre(ap.corSecundaria));
+        css.setProperty('--cor-acento-texto', temaClaro ? corLegivelSobre(ap.corSecundaria, '#FFFFFF') : ap.corSecundaria);
+    }
+    if (temaClaro) {
+        raiz.dataset.tema = 'claro';
+        css.setProperty('--cor-fundo', ap.corFundo);
+    }
+
+    if (loja.nome) {
+        document.title = document.title.replace('LD Lanches', loja.nome);
+        document.querySelectorAll('.logo-text').forEach(el => { el.textContent = loja.nome; });
+    }
+    if (ap.logoUrl) {
+        document.querySelectorAll('img[src="images/logo.png"]').forEach(img => {
+            img.src = ap.logoUrl;
+            img.alt = `Logo ${loja.nome}`;
+        });
+    }
+
+    // Faixa de boas-vindas (hero): banner e texto da loja
+    const hero = document.querySelector('.hero-banner');
+    if (hero) {
+        if (ap.bannerUrl) {
+            const veu = temaClaro ? 'rgba(255,255,255,0.55), rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.6), rgba(0,0,0,0.6)';
+            hero.style.backgroundImage = `linear-gradient(90deg, ${veu}), url('${ap.bannerUrl}')`;
+            hero.classList.add('hero-com-banner');
+        }
+        if (ap.mensagemBoasVindas) {
+            const [titulo, ...resto] = ap.mensagemBoasVindas.split('\n');
+            const h2 = hero.querySelector('h2');
+            const p = hero.querySelector('p');
+            if (h2) h2.textContent = titulo;
+            if (p) p.textContent = resto.join(' ').trim();
+        }
+    }
+
+    if (ap.aviso) {
+        const faixa = document.createElement('div');
+        faixa.className = 'aviso-loja';
+        faixa.textContent = ap.aviso;
+        faixa.style.cssText = 'background:var(--cor-acento);color:var(--cor-texto-sobre-acento);text-align:center;padding:8px 12px;font-weight:600;';
+        document.body.prepend(faixa);
+    }
+    if (ap.cssExtra) {
+        const estilo = document.createElement('style');
+        estilo.textContent = ap.cssExtra;
+        document.head.appendChild(estilo);
+    }
+}
+
+/** Converte a data ISO do servidor em "Hoje, 15:30" / "Ontem, 09:10" / "12/11/2026, 20:00". */
+function formatarDataPedido(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const hoje = new Date();
+    const ontem = new Date(); ontem.setDate(hoje.getDate() - 1);
+    const mesmoDia = (a, b) => a.toDateString() === b.toDateString();
+    const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    if (mesmoDia(d, hoje)) return `Hoje, ${hora}`;
+    if (mesmoDia(d, ontem)) return `Ontem, ${hora}`;
+    return `${d.toLocaleDateString('pt-BR')}, ${hora}`;
+}
+
 // ================== CONFIG GERAL ==================
 let categorias = [];
 const mockProdutos = [];
 
+// TODO (Fase 1): endereço, telefone e horários passam a vir do cadastro da loja.
 const ENDERECO_COMERCIO = {
     nome: "LD Lanches",
     logradouro: "Rua do Marechal Teodoro",
@@ -29,11 +171,8 @@ function parseExtras(extraStr) {
 }
 
 async function carregarProdutosDoBackend() {
-    const host = window.location.hostname || 'localhost';
-    const baseUrl = `http://${host}:8081`;
-
     try {
-        const resp = await fetch(`${baseUrl}/products`, {
+        const resp = await fetch(`${API_LOJA}/produtos`, {
             headers: { 'Accept': 'application/json' }
         });
 
@@ -42,28 +181,23 @@ async function carregarProdutosDoBackend() {
         }
 
         const produtosApi = await resp.json();
+        await VITRINE_PRONTA; // garante a imagem padrão da loja
 
         // esvazia a lista atual
         mockProdutos.length = 0;
 
         // converte o DTO da API para o formato usado no front
+        // ProdutoDto do servidor: { id, categoriaId, categoriaNome, nome, descricao, precoCentavos, adicionais, destaque }
         produtosApi.forEach(p => {
-            // tenta vários formatos possíveis vindo do backend
-            const categoriaNome =
-                (p.category && (p.category.name || p.category.categoryName)) ||
-                p.categoryName ||
-                p.type ||
-                'Outros';
-        
             mockProdutos.push({
                 id: p.id,
-                nome: p.name,
-                descricao: p.description || '',
-                preco: p.price,
-                imagemUrl: 'images/logo.png',   // ou p.imageUrl se tiver depois
-                categoria: categoriaNome,
-                extras: parseExtras(p.extra),
-                destaque: !!p.highlighted
+                nome: p.nome,
+                descricao: p.descricao || '',
+                preco: (p.precoCentavos || 0) / 100,
+                imagemUrl: imagemPadraoProduto(),   // fotos de produto entram na Fase 1
+                categoria: p.categoriaNome || 'Outros',
+                extras: parseExtras(p.adicionais),
+                destaque: !!p.destaque
             });
         });
 
@@ -105,19 +239,16 @@ function preencherBannersDestaque() {
 }
 async function carregarCategoriasDoBackend() {
     try {
-      const host = window.location.hostname || 'localhost';
-      const baseUrl = `http://${host}:8081`;
-  
-      const resp = await fetch(`${baseUrl}/category`, {
+      const resp = await fetch(`${API_LOJA}/categorias`, {
         headers: { 'Accept': 'application/json' }
       });
-  
+
       if (!resp.ok) {
         console.error('Erro ao carregar categorias', resp.status);
         return;
       }
-  
-      categorias = await resp.json(); // [{ id, categoryName }]
+
+      categorias = await resp.json(); // [{ id, nome, ordem }]
     } catch (e) {
       console.error('Erro ao carregar categorias', e);
     }
@@ -125,8 +256,6 @@ async function carregarCategoriasDoBackend() {
 
 const taxaEntrega = 5.00;
 const WHATSAPP_NUMERO = "5511999998888"; // altere para o número real
-
-const API_BASE_URL = `http://${window.location.hostname || "localhost"}:8081`;
 
 
 // ================== PERFIL / CADASTRO ==================
@@ -555,7 +684,7 @@ function showConfirmDelete(titulo, texto, onConfirm) {
 // ================== CARRINHO / SACOLA ==================
 function getCart() {
     try {
-        const data = localStorage.getItem('ldLanchesCart');
+        const data = localStorage.getItem(CHAVE_CARRINHO);
         return data ? JSON.parse(data) : [];
     } catch (e) {
         console.error('Erro lendo carrinho:', e);
@@ -565,7 +694,7 @@ function getCart() {
 
 function saveCart(cart) {
     try {
-        localStorage.setItem('ldLanchesCart', JSON.stringify(cart));
+        localStorage.setItem(CHAVE_CARRINHO, JSON.stringify(cart));
     } catch (e) {
         console.error('Erro salvando carrinho:', e);
     }
@@ -573,7 +702,7 @@ function saveCart(cart) {
 
 function clearCart() {
     try {
-        localStorage.removeItem('ldLanchesCart');
+        localStorage.removeItem(CHAVE_CARRINHO);
     } catch (e) {
         console.error('Erro limpando carrinho:', e);
     }
@@ -918,40 +1047,6 @@ function montarDescricaoParaBackend(pedido, perfil) {
     return linhas.join("\n");
 }
 
-// Envia o pedido para o backend Spring (POST /order)
-async function enviarPedidoParaBackend(pedido) {
-    const perfil = getPerfil() || {};
-
-    const descricao = montarDescricaoParaBackend(pedido, perfil);
-
-    const body = {
-        code: pedido.id,              // ex: "LDL-0001"
-        description: descricao,       // texto completo
-        total: Number((pedido.total || 0).toFixed(2))  // BigDecimal no backend
-    };
-
-    const url = (typeof API_BASE_URL !== "undefined"
-        ? API_BASE_URL
-        : `http://${window.location.hostname || 'localhost'}:8081`) + "/order";
-
-    const resp = await fetch(url, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        },
-        body: JSON.stringify(body)
-    });
-
-    if (!resp.ok) {
-        const texto = await resp.text().catch(() => "");
-        throw new Error(`Erro ao criar pedido no backend: ${resp.status} - ${texto}`);
-    }
-
-    // se quiser usar algo depois (id, status, etc)
-    return await resp.json().catch(() => null);
-}
-
 function fmtBRL(n) { return Number(n || 0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 
 // Monta a descrição no padrão do painel (Produtos / Entrega|Retirada / Cliente / Pagamento / Obs / Total)
@@ -1011,20 +1106,21 @@ async function enviarPedidoParaBackend(pedido) {
     const perfil = (typeof getPerfil === 'function' ? getPerfil() : {}) || {};
     const descricao = montarDescricaoParaBackend(pedido, perfil);
   
+    // ATENÇÃO (Fase 2): o total ainda é calculado aqui no navegador. Na Fase 2 o pedido passa a
+    // enviar os itens e o servidor calcula o preço.
     const body = {
-      code: pedido.id,                 // Ex.: "LDL-0A1B2C"
-      description: descricao,
-      total: Number((pedido.total || 0).toFixed(2))
+      descricao: descricao,
+      totalCentavos: Math.round((pedido.total || 0) * 100)
     };
-  
-    const resp = await fetch(`${API_BASE_URL}/order`, {
+
+    const resp = await fetch(`${API_LOJA}/pedidos`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Accept": "application/json" },
       body: JSON.stringify(body)
     });
-  
+
     if (!resp.ok) throw new Error(`Falha ao criar pedido: ${resp.status} ${await resp.text().catch(()=> '')}`);
-    return await resp.json(); // OrderOutDTO {id, code, total, description, date, status}
+    return await resp.json(); // PedidoPublicoDto { codigo, status, totalCentavos, criadoEm }
   }
 
   function gerarCodigoPedido() {
@@ -1088,14 +1184,15 @@ async function enviarPedidoParaBackend(pedido) {
         try {
         const created = await enviarPedidoParaBackend(pedido);
         if (created) {
-            pedido.backendId = created.id;
-            pedido.code      = created.code;
+            // o código é a "chave" para o cliente acompanhar o pedido
+            pedido.codigoPublico = created.codigo;
+            pedido.code          = created.codigo;
+            pedido.id            = created.codigo;
 
             const novoStatus = created.status || 'NOVO';
 
-            // data/hora que o backend mandou (ex: "Hoje, 15:30")
-            pedido.date             = created.date;          // "Hoje, 15:30"
-            pedido.descricaoBackend = created.description;  // se quiser visualizar
+            pedido.criadoEm = created.criadoEm;
+            pedido.date     = formatarDataPedido(created.criadoEm);  // "Hoje, 15:30"
 
             // se o status vindo do backend for diferente do que estava,
             // considera que acabou de mudar e atualiza a hora
@@ -1127,7 +1224,7 @@ async function enviarPedidoParaBackend(pedido) {
 // ================== HISTÓRICO DE PEDIDOS ==================
 function getPedidos() {
     try {
-        const data = localStorage.getItem('ldPedidos');
+        const data = localStorage.getItem(CHAVE_PEDIDOS);
         return data ? JSON.parse(data) : [];
     } catch (e) {
         console.error('Erro lendo pedidos:', e);
@@ -1137,7 +1234,7 @@ function getPedidos() {
 
 function savePedidos(lista) {
     try {
-        localStorage.setItem('ldPedidos', JSON.stringify(lista));
+        localStorage.setItem(CHAVE_PEDIDOS, JSON.stringify(lista));
     } catch (e) {
         console.error('Erro salvando pedidos:', e);
     }
@@ -1155,6 +1252,7 @@ function isPaginaPedidos() {
       case "EM_PREPARO": return "Em preparo";
       case "SAIU_PARA_ENTREGA": return "Saiu para entrega";
       case "FINALIZADO": return "Finalizado";
+      case "CANCELADO": return "Cancelado";
       default: return s || "—";
     }
   }
@@ -1165,11 +1263,11 @@ function isPaginaPedidos() {
   
     const atualizados = await Promise.all(
       pedidos.map(async (p) => {
-        // pedidos antigos (antes do backend) não têm backendId → deixa como está
-        if (!p.backendId) return p;
-  
+        // pedidos sem código público (antigos ou não enviados) → deixa como está
+        if (!p.codigoPublico) return p;
+
         try {
-          const r = await fetch(`${API_BASE_URL}/order/${p.backendId}`, {
+          const r = await fetch(`${API_LOJA}/pedidos/${encodeURIComponent(p.codigoPublico)}`, {
             headers: { "Accept": "application/json" }
           });
   
@@ -1190,8 +1288,8 @@ function isPaginaPedidos() {
   
           return {
             ...p,
-            code: dto.code || p.code,
-            total: dto.total ?? p.total,
+            code: dto.codigo || p.code,
+            total: dto.totalCentavos != null ? dto.totalCentavos / 100 : p.total,
   
             // status "cru" vindo do backend (NOVO, VISTO, EM_PREPARO, .)
             status: novoStatus,
@@ -1202,8 +1300,7 @@ function isPaginaPedidos() {
             // hora da última alteração de status
             statusUpdatedAt,
   
-            date: dto.date || p.date,
-            descricaoBackend: dto.description || p.descricaoBackend
+            date: dto.criadoEm ? formatarDataPedido(dto.criadoEm) : p.date
           };
         } catch (e) {
           console.error("Erro ao atualizar pedido com backend", e);

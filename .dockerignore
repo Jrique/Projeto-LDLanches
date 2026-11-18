@@ -1,0 +1,10 @@
+**/build/
+**/.gradle/
+**/.kotlin/
+**/.idea/
+**/node_modules/
+LDLanchesASW/kotlin-js-store/
+.git/
+.env
+**/local.properties
+LDLanchesASW/tunedata.iff

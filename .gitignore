@@ -1,0 +1,19 @@
+# Gradle / IDE
+.gradle/
+**/build/
+!**/src/**/build/
+.kotlin/
+.idea/
+*.iml
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+.DS_Store
+node_modules/
+
+# Segredos e configuração local
+.env
+*.env.local
+# arquivo binário desconhecido (identificado como possível chave PGP) — não versionar
+tunedata.iff

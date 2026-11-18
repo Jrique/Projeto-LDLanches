@@ -39,5 +39,9 @@ plugins {
 }
 
 rootProject.name = "LDLanchesASW"
-include(":composeApp")
+// -PsomenteServidor=true: usado no build da imagem Docker do servidor (não precisa de Android SDK nem do app)
+val somenteServidor = providers.gradleProperty("somenteServidor").orNull == "true"
+
+include(":shared")
 include(":server")
+if (!somenteServidor) include(":composeApp")

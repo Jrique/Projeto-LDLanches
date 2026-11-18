@@ -11,6 +11,7 @@
         rel="stylesheet"
     />
     <link rel="stylesheet" href="./css/style.css" />
+    <link rel="stylesheet" href="./css/tema-loja.css" />
 </head>
 <body>
 
@@ -344,12 +345,11 @@
                 return;
             }
 
-            lista.forEach((produto, index) => {
-                const seloHtml = index === 0
-                ? '<span class="produto-selo produto-selo-destaque">Destaque</span>'
-        : (index === 0
-            ? '<span class="produto-selo">Mais pedido</span>'
-            : '');
+            lista.forEach((produto) => {
+                // selo só para produtos marcados como destaque no painel
+                const seloHtml = produto.destaque
+                    ? '<span class="produto-selo produto-selo-destaque">Destaque</span>'
+                    : '';
 
                 const card = `
                     <a class="produto-card-link" href="produto.html?id=${produto.id}">
@@ -385,11 +385,12 @@
 
             let nomesCategorias = [];
 
-            // tenta usar o que veio de /category
+            // categorias da loja (já vêm na ordem definida no painel); só as que têm produto
             if (Array.isArray(categorias) && categorias.length) {
+                const comProduto = new Set(mockProdutos.map(p => p.categoria));
                 nomesCategorias = categorias
-                    .map(c => c.categoryName)
-                    .filter(Boolean);
+                    .map(c => c.nome)
+                    .filter(nome => nome && comProduto.has(nome));
             } else {
                 // fallback: categorias únicas encontradas nos produtos
                 nomesCategorias = [...new Set(mockProdutos.map(p => p.categoria))];
