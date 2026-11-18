@@ -15,5 +15,5 @@ node_modules/
 # Segredos e configuração local
 .env
 *.env.local
-# arquivo binário desconhecido (identificado como possível chave PGP) — não versionar
+# arquivo gerado por ferramenta da IDE, não usado pelo projeto
 tunedata.iff
